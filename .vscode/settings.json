@@ -3,5 +3,12 @@
         "cstdio": "cpp"
     },
     "marscode.chatLanguage": "cn",
-    "cmake.sourceDirectory": "/home/hua/study/code/cpp/30dayMakeCppServer/code/day13"
+    "makefile.makefilePath": "${workspaceFolder}/myCode",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/hua/study/code/cpp/30dayMakeCppServer",
+            "binaryPath": "/home/hua/study/code/cpp/30dayMakeCppServer/server",
+            "binaryArgs": []
+        }
+    ]
 }
