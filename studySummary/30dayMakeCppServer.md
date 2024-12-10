@@ -182,3 +182,33 @@ gantt
 
 ```
 
+## day4
+
+
+-  **bug**
+    
+    - 在wsl2上使用clangd的进行编译时出现一个问题，无法正确引入cpp头文件
+        wsl环境为
+        ```
+        Distributor ID: Ubuntu
+        Description:    Ubuntu 22.04.5 LTS
+        Release:        22.04
+        Codename:       jammy
+        ```
+        在安装g++12后解决
+        ```
+        sudo apt install g++-12
+        ```
+        参考[clang++ cannot find iostream](https://askubuntu.com/questions/1449769/clang-cannot-find-iostream)
+    - 设置套接字非阻塞模式出错
+        ```cpp
+        //正确设置
+        void Socket::setnonblocking() {
+        fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+        }
+        
+        //错误设置
+        void Socket::setnonblocking() {
+        fcntl(fd, F_SETFL, fcntl(fd, F_GETFL | O_NONBLOCK));
+        }
+        ```
