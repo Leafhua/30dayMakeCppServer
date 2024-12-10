@@ -14,8 +14,13 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <unistd.h>
+
+#define BUFFER_SIZE 1024 
+
 int main() {
   int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  errif(sockfd == -1, "socket create error");
+
   struct sockaddr_in serv_addr;
   bzero(&serv_addr, sizeof(serv_addr));
   serv_addr.sin_family = AF_INET;
@@ -25,7 +30,7 @@ int main() {
         "socket connect error");
 
   while (true) {
-    char buf[1024];
+    char buf[BUFFER_SIZE];
     bzero(&buf, sizeof(buf));
     scanf("%s", buf);
     ssize_t write_bytes = write(sockfd, buf, sizeof(buf));
@@ -46,6 +51,6 @@ int main() {
       errif(true, "socket read error\n");
     }
   }
-
+  close(sockfd);
   return 0;
 }
