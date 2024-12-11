@@ -8,32 +8,37 @@
  * @copyright Copyright (c) 2024
  *
  */
-#include <cstdint>
+
+#include <functional>
 #include <sys/epoll.h>
-#include <sys/types.h>
 
 #pragma once
 
-class Epoll;
+class EventLoop;
 class Channel {
 private:
-  Epoll *ep;
+  EventLoop *loop;
   int fd;
   u_int32_t events;
   u_int32_t revents;
   bool inEpoll;
+  std::function<void()> callback;
 
 public:
-  Channel(Epoll *_ep, int _fd);
+  Channel(EventLoop *_loop, int _fd);
   ~Channel();
 
+  void handleEvent();
   void enableReading();
+
   int getFd();
+
   uint32_t getEvents();
   uint32_t getRevents();
   bool getInEpoll();
   void setInEpoll();
 
   void setRevents(uint32_t);
+  void setCallback(std::function<void()>);
   ;
 };

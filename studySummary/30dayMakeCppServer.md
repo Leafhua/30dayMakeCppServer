@@ -244,3 +244,69 @@ flowchart TD
     I -->|无事件| T[继续等待]
     T --> H
 ```
+
+## day06
+重构代码，添加Eventloop和server类实现服务器功能
+代码流程为
+```mermaid
+flowchart TD
+    A[开始] --> B[创建 EventLoop 对象]
+    B --> C[使用 EventLoop 对象创建 Server 对象]
+    C --> D[启动 EventLoop 主循环]
+    D --> E[程序结束]
+```
+在LOOP中为
+```mermaid
+flowchart TD
+    A[开始] --> B{是否退出?}
+    B -->|否| C[轮询事件]
+    C --> D[处理事件]
+    D --> B
+    B -->|是| E[结束]
+```
+
+- 总结
+  回调函数理解还不行
+  Server.cpp loop()函数中
+  ```cpp
+    std::function<void()> cb = std::bind(&Server::newConnection, this ,serv_sock);
+    servChannel->setCallback(cb);
+    servChannel->enableReading();
+  ```
+  newConnection()函数
+  ```cpp
+    auto cb= std::bind(&Server::handleReadEvent, this, clnt_sock->getFd());
+    clntChannel->setCallback(cb);
+    clntChannel->enableReading();
+  ```
+  类图描述
+  ```mermaid
+    classDiagram
+    class Server {
+        +start()
+        +handleReadEvent(int fd)
+        +handleWriteEvent(int fd)
+    }
+
+    class EventLoop {
+        +loop()
+        +runInLoop(Functor cb)
+    }
+
+    class Channel {
+        +setReadCallback(Functor cb)
+        +setWriteCallback(Functor cb)
+        +handleEvent()
+    }
+
+    class Functor {
+        +operator()()
+    }
+
+    Server --> EventLoop : "创建并使用"
+    Server --> Channel : "创建并使用"
+    Channel --> EventLoop : "注册事件"
+    Channel --> Functor : "设置回调"
+    EventLoop --> Channel : "调用回调"
+  ```
+  
