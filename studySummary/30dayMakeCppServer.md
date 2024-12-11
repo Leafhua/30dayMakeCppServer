@@ -199,7 +199,7 @@ gantt
         ```
         sudo apt install g++-12
         ```
-        参考[clang++ cannot find iostream](https://askubuntu.com/questions/1449769/clang-cannot-find-iostream)
+        <!-- 参考[clang++ cannot find iostream](https://askubuntu.com/questions/1449769/clang-cannot-find-iostream) -->
     - 设置套接字非阻塞模式出错
         ```cpp
         //正确设置
@@ -212,3 +212,35 @@ gantt
         fcntl(fd, F_SETFL, fcntl(fd, F_GETFL | O_NONBLOCK));
         }
         ```
+
+
+## day5
+创建Channel类封装文件描述符事件处理。
+
+>加入Channel后处理流程
+```mermaid
+flowchart TD
+    A[开始] --> B[创建服务器套接字]
+    B --> C[绑定地址并监听]
+    C --> D[创建 Epoll 对象]
+    D --> E[设置服务器套接字为非阻塞]
+    E --> F[创建服务器 Channel 对象]
+    F --> G[启用服务器 Channel 的读事件]
+    G --> H[主循环]
+    H --> I{Epoll 等待事件}
+    I -->|有事件| J[获取活跃 Channel 列表]
+    J --> K{遍历活跃 Channel 列表}
+    K -->|是服务器套接字| L[处理新连接]
+    K -->|是客户端套接字| M[处理读事件]
+    K -->|其他事件| N[处理其他事件]
+    L --> O[创建客户端套接字]
+    O --> P[设置客户端套接字为非阻塞]
+    P --> Q[创建客户端 Channel 对象]
+    Q --> R[启用客户端 Channel 的读事件]
+    R --> S[返回主循环]
+    M --> S[返回主循环]
+    N --> S[返回主循环]
+    S --> H
+    I -->|无事件| T[继续等待]
+    T --> H
+```

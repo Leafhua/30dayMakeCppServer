@@ -9,6 +9,7 @@
  *
  */
 
+#include "Channel.h"
 #include "Epoll.h"
 #include "InetAddress.h"
 #include "Socket.h"
@@ -66,22 +67,29 @@ int main() {
   serv_sock->listen();
   Epoll *ep = new Epoll();
   serv_sock->setnonblocking();
-  ep->addFd(serv_sock->getFd(), EPOLLIN | EPOLLET);
+  Channel *serv_channel = new Channel(ep, serv_sock->getFd());
+  serv_channel->enableReading();
+  // 使用上述代码设置ET
+  // ep->addFd(serv_sock->getFd(), EPOLLIN | EPOLLET);
   while (true) {
-    std::vector<epoll_event> events = ep->poll();
-    int nfds = events.size();
+    std::vector<Channel *> activeChannels = ep->poll();
+    int nfds = activeChannels.size();
     for (int i = 0; i < nfds; ++i) {
-      if (events[i].data.fd == serv_sock->getFd()) {
+      int chfd = activeChannels[i]->getFd();
+      if (chfd == serv_sock->getFd()) {
         InetAddress *clnt_addr = new InetAddress();
         Socket *clnt_sock = new Socket(serv_sock->accept(clnt_addr));
         printf("new client fd %d! IP: %s Port: %d\n", clnt_sock->getFd(),
                inet_ntoa(clnt_addr->addr.sin_addr),
                ntohs(clnt_addr->addr.sin_port));
         clnt_sock->setnonblocking();
-        ep->addFd(clnt_sock->getFd(), EPOLLIN | EPOLLET);
+        Channel *clntChannel = new Channel(ep, clnt_sock->getFd());
+        clntChannel->enableReading();
+        // 使用上述代码设置ET
+        // ep->addFd(clnt_sock->getFd(), EPOLLIN | EPOLLET);
 
-      } else if (events[i].events & EPOLLIN) {
-        handleReadEvent(events[i].data.fd);
+      } else if (activeChannels[i]->getEvents() & EPOLLIN) {
+        handleReadEvent(activeChannels[i]->getFd());
 
       } else {
         printf("something else happened\n");
