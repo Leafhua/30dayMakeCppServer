@@ -339,4 +339,22 @@ flowchart TD
 
 ```
 
+##day08
+修改较多分离Acceptor，新的连接逻辑在Server，Channel控制资源释放，InetAddress修改，地址端口设为privet，怎加获取方法。为适应InetAddress修改，Server类中修改Bind与accept函数。Epoll类中adFd删除
 
+新加Connection类处理链接操作（消息回复）
+```mermaid
+flowchart TD
+    A[开始] --> B{读取数据}
+    B -->|读取成功| C[打印消息并写回客户端]
+    C --> B
+    B -->|EINTR| D[继续读取]
+    D --> B
+    B -->|EAGAIN 或 EWOULDBLOCK| E[结束本次读取]
+    E --> F[返回]
+    B -->|EOF| G[客户端断开连接]
+    G --> H[调用断开连接回调]
+    H --> F
+    B -->|其他错误| I[处理错误]
+    I --> F
+```

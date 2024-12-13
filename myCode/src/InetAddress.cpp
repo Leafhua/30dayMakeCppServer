@@ -12,7 +12,9 @@
 #include "InetAddress.h"
 #include "Socket.h"
 #include <arpa/inet.h>
+#include <netinet/in.h>
 #include <strings.h>
+#include <unistd.h>
 
 InetAddress::InetAddress() : addr_len(sizeof(addr)) {
   bzero(&addr, sizeof(addr));
@@ -28,3 +30,12 @@ InetAddress::InetAddress(const char *ip, uint16_t port)
 }
 
 InetAddress::~InetAddress() {}
+
+void InetAddress::setInetAddr(sockaddr_in _addr, socklen_t _addr_len) {
+  addr = _addr;
+  addr_len = _addr_len;
+}
+
+sockaddr_in InetAddress::getAddr() { return addr; }
+
+socklen_t InetAddress::getAddr_len() { return addr_len; }
