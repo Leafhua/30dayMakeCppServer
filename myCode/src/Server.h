@@ -10,14 +10,13 @@
  */
 #pragma once
 
-#include "EventLoop.h"
-#include "Socket.h"
 class EventLoop;
 class Socket;
+class Acceptor;
 class Server {
 private:
     EventLoop *loop;
-
+    Acceptor *acceptor;
 public:
     Server(EventLoop*);
     ~Server();

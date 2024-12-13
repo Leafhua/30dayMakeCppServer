@@ -310,3 +310,33 @@ flowchart TD
     EventLoop --> Channel : "调用回调"
   ```
   
+## day07
+将server类中socket初始化设置抽象出Acceptor类
+
+>Acceptor运行流程
+```mermaid
+flowchart TD
+    A[开始] --> B[创建Socket]
+    B --> C[创建InetAddress]
+    C --> D[绑定地址和端口]
+    D --> E[设置监听]
+    E --> F[设置非阻塞模式]
+    F --> G[创建Channel]
+    G --> H[设置回调函数]
+    H --> I[启用读取事件]
+    I --> J[结束]
+
+    K[开始] --> L[删除Socket]
+    L --> M[删除InetAddress]
+    M --> N[删除Channel]
+    N --> O[结束]
+
+    P[开始] --> Q[调用新连接回调函数]
+    Q --> R[结束]
+
+    S[开始] --> T[设置新连接回调函数]
+    T --> U[结束]
+
+```
+
+
