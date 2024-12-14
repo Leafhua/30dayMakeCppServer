@@ -21,12 +21,12 @@ private:
     EventLoop *loop;
     Socket *sock;
     Channel *accepChannel;
+    std::function<void(Socket*)> newConnectionCallback;
 
 public:
     Acceptor(EventLoop *_loop);
     ~Acceptor();
 
-    std::function<void(Socket*)> newConnectionCallback;
 
     void acceptConnection();
     void setNewConnectionCallback(std::function<void(Socket*)>);

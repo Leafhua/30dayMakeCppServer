@@ -24,7 +24,7 @@ private:
     Socket *sock;
     Channel *channel;
     Buffer *readBuffer;
-    std::function<void(Socket*)> deleteConnectionCallback;
+    std::function<void(int)> deleteConnectionCallback;
     std::string *inBuffer;
 
 
@@ -33,7 +33,8 @@ public:
     ~Connection();
 
     void echo(int sockfd);
-    void setDeleteConnectionCallback(std::function<void (Socket*)>);
+    void setDeleteConnectionCallback(std::function<void(int)>);
+    void send(int sockfd);
     
 };
 

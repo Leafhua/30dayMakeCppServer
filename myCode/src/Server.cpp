@@ -50,8 +50,13 @@ void Server::newConnection(Socket *sock) {
 
 }
 
-void Server::deleteConnection(Socket *sock) {
-  Connection *conn = connections[sock->getFd()];
-  connections.erase(sock->getFd());
-  delete conn;
+void Server::deleteConnection(int sockfd) {
+  if(sockfd != -1) {
+    auto it = connections.find(sockfd);
+    if (it != connections.end()) {
+      Connection *conn = connections[sockfd];
+      connections.erase(sockfd);
+      delete conn;
+    }
+  }
 }

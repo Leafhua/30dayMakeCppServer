@@ -439,3 +439,61 @@ flowchart TD
     G --> H[返回等待]
     H --> B
 ```
+
+## day11
+完善线程池,使用template在ThreadPool中添加线程池模板.使用了很多c++11特性，如lambda表达式，auto类型推导等。
+添加多线程测试程序
+
+在ThreadPool.h中用到了很多c++11新特性
+  1. auto关键字：用于让编译器自动推导变量的类型。
+  1. std::make_shared：用于创建一个std::shared_ptr，指向一个std::packaged_task对象，从而避免了额外的内存分配。
+  1. std::bind：用于绑定可调用对象及其参数，创建一个新的可调用对象。
+  1. std::forward：用于完美转发参数，保持参数的左值或右值属性。
+  1. std::future：用于获取异步任务的结果。
+  1. std::result_of：用于获取可调用对象的返回类型。
+  1. std::unique_lock：用于管理互斥锁，提供了更灵活的锁定机制。
+  1. std::mutex：用于保护共享数据，确保线程安全。
+  1. std::condition_variable：用于线程间的通信，允许线程等待某个条件的发生。
+  1. emplace：用于在容器内部构造对象，避免了额外的拷贝或移动操作。
+```c++
+template <class F, class... Args>
+auto ThreadPool::add(F &&f, Args &&...args)
+    -> std::future<typename std::result_of<F(Args...)>::type> {
+  // 使用auto关键字让编译器自动推导返回类型
+  using return_type = typename std::result_of<F(Args...)>::type;
+
+  // 使用std::make_shared创建一个shared_ptr，指向一个packaged_task对象
+  // packaged_task包装了一个可调用对象（这里是lambda表达式）
+  auto task = std::make_shared<std::packaged_task<return_type()>>(
+      std::bind(std::forward<F>(f), std::forward<Args>(args)...));
+
+  // 获取packaged_task的future对象，用于获取任务的结果
+  std::future<return_type> res = task->get_future();
+  {
+    // 使用std::unique_lock来管理互斥锁，确保线程安全
+    std::unique_lock<std::mutex> lock(tasks_mtx);
+
+    // 检查线程池是否已经停止
+    if (stop) {
+      throw std::runtime_error("enqueue on stopped ThreadPool");
+    }
+
+    // 使用emplace方法将任务添加到任务队列中
+    // emplace方法在容器内部构造对象，避免了额外的拷贝或移动操作
+    tasks.emplace([task]() {(*task)();});
+  }
+
+  // 使用条件变量通知一个等待的线程
+  cv.notify_one();
+
+  // 返回future对象
+  return res;
+}
+
+```
+
+
+
+- bug
+  1. 在多线程测试程序下,效果不理想,部分serverToClient消息没有收到
+  2. 线程过多server程序终止,报错 `出现异常。Segmentation fault` 同时短期内地址被占用.

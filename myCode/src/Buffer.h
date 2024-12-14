@@ -29,4 +29,5 @@ public:
   void append(const char *_str, int _size);
   void clear();
   void getline();
+  void setBuf(const char *);
 };

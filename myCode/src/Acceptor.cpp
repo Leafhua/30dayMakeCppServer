@@ -24,11 +24,12 @@ Acceptor::Acceptor(EventLoop *_loop) : loop(_loop),sock(nullptr), accepChannel(n
   InetAddress *addr = new InetAddress("127.0.0.1", 8883);
   sock->bind(addr);
   sock->listen();
-  sock->setnonblocking();
+//   sock->setnonblocking();
   accepChannel = new Channel(loop, sock->getFd());
   auto cb = std::bind(&Acceptor::acceptConnection, this);
-  accepChannel->setCallback(cb);
-  accepChannel->enableReading();
+  accepChannel->setReadCallback(cb);
+  accepChannel->enableRead();
+  accepChannel->setUseThreadPool(false);
   delete addr;
 }
 
