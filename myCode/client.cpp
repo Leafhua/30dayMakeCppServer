@@ -36,7 +36,7 @@ int main() {
     ssize_t write_bytes = write(sockfd, buf, sizeof(buf));
 
     if (write_bytes == -1) {
-      printf("socket write error, can't write ant more!\n");
+      printf("socket write error, can't write any more!\n");
       break;
     }
     bzero(&buf, sizeof(buf));

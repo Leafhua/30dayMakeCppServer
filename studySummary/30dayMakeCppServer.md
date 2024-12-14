@@ -339,7 +339,7 @@ flowchart TD
 
 ```
 
-##day08
+## day08
 修改较多分离Acceptor，新的连接逻辑在Server，Channel控制资源释放，InetAddress修改，地址端口设为privet，怎加获取方法。为适应InetAddress修改，Server类中修改Bind与accept函数。Epoll类中adFd删除
 
 新加Connection类处理链接操作（消息回复）
@@ -358,3 +358,50 @@ flowchart TD
     B -->|其他错误| I[处理错误]
     I --> F
 ```
+## day09
+添加缓冲池Buffer,主要在Connection内echo中缓冲socket数据
+
+- class内成员变量初始化顺序按照声明顺序
+   在 C++ 中，成员变量的初始化顺序是按照它们在类中声明的顺序进行的，而不是按照构造函数初始化列表中的顺序。因此，为了消除编译器的警告，需要确保初始化列表中的顺序与类定义中的声明顺序一致。这样可以避免潜在的未定义行为。
+
+Buffer控制流图
+apeend()函数
+```mermaid
+flowchart TD
+    Start[开始] --> A{是否达到字符串长度}
+    A -->|是| End[结束]
+    A -->|否| B{当前字符是否为 \0}
+    B -->|是| End
+    B -->|否| C[将字符添加到缓冲区]
+    C --> A
+
+```
+getline()函数
+```mermaid
+flowchart TD
+    Start[开始] --> A[清空缓冲区]
+    A --> B[从标准输入读取一行]
+    B --> C[将读取的内容存储到缓冲区]
+    C --> End[结束]
+```
+完整控制流图
+```mermaid
+flowchart TB
+    subgraph Buffer类
+        subgraph append方法
+            Start[开始] --> A{是否达到字符串长度}
+            A -->|是| End[结束]
+            A -->|否| B{当前字符是否为 \0}
+            B -->|是| End
+            B -->|否| C[将字符添加到缓冲区]
+            C --> A
+        end
+        subgraph getline方法
+            Start[开始] --> A[清空缓冲区]
+            A --> B[从标准输入读取一行]
+            B --> C[将读取的内容存储到缓冲区]
+            C --> End[结束]
+        end
+    end
+```
+
