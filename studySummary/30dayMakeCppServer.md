@@ -497,3 +497,170 @@ auto ThreadPool::add(F &&f, Args &&...args)
 - bug
   1. 在多线程测试程序下,效果不理想,部分serverToClient消息没有收到
   2. 线程过多server程序终止,报错 `出现异常。Segmentation fault` 同时短期内地址被占用.
+
+## day12
+设置主从Reactor模式，改写Server类添加subReactor，更新Connection。重构EventLoop(由Server中mainReactor管理Thread)
+>主从Reactor模式的基本概念
+>1. Reactor：
+>   - Reactor是一种事件驱动的设计模式，用于处理多个并发连接。它通过一个或多个线程来监听和分发事件（如读写事件），并将这>些事件分发给相应的处理程序。
+>2. 主Reactor（Main Reactor）：
+>   - 主Reactor负责监听客户端的连接请求（通常是监听套接字上的accept事件）。
+>   - 当有新的连接请求到达时，主Reactor会接受连接并创建一个新的套接字，然后将这个套接字分配给一个从Reactor。
+>3. 从Reactor（Sub Reactor）：
+>   - 从Reactor负责处理已经建立的连接上的读写事件。
+>   - 每个从Reactor通常绑定一个线程，负责处理分配给它的所有连接的读写操作。
+>   - 这样可以将连接的管理任务分散到多个线程中，提高并发处理能力。
+
+主从Reactor模式的优点
+1. 高并发处理能力：
+   - 通过将连接的管理任务分散到多个从Reactor中，可以显著提高服务器的并发处理能力。
+   - 每个从Reactor可以专注于处理一组连接，避免了单线程Reactor模式下的性能瓶颈。
+2. 更好的资源利用：
+   - 主Reactor专注于接受新的连接请求，而从Reactor专注于处理已有的连接，使得资源分配更加合理。
+   - 可以根据系统负载动态调整从Reactor的数量，从而更好地利用系统资源。
+3. 简化编程模型：
+   - 主从Reactor模式将连接的管理任务分解为多个独立的子任务，使得代码结构更加清晰，便于维护和扩展。3.
+
+- 类图
+```mermaid
+classDiagram
+    class MainReactor {
+        +addEpollFd(int fd)
+        +removeEpollFd(int fd)
+        +handleEvents()
+    }
+
+    class SubReactor {
+        +addEpollFd(int fd)
+        +removeEpollFd(int fd)
+        +handleEvents()
+    }
+
+    class Server {
+        +start()
+        +stop()
+        +newConnection(int sockfd)
+        +handleReadEvent(int fd)
+        +handleWriteEvent(int fd)
+    }
+
+    class Connection {
+        +read()
+        +write()
+        +close()
+    }
+
+    class EventLoop {
+        +loop()
+        +runInLoop(Functor cb)
+    }
+
+    class Thread {
+        +start()
+        +join()
+    }
+
+    class ThreadPool {
+        +submit(Task task)
+    }
+
+    class Acceptor {
+        +listen()
+        +acceptConnection()
+    }
+
+    class InetAddress {
+        +getIp()
+        +getPort()
+    }
+
+    class Socket {
+        +createNonblocking()
+        +bindAddress(InetAddress& addr)
+        +listen()
+        +accept()
+        +shutdownWrite()
+    }
+
+    class Channel {
+        +setReadCallback(Functor cb)
+        +setWriteCallback(Functor cb)
+        +handleEvent()
+    }
+
+    class Functor {
+        +operator()()
+    }
+
+    Server --> MainReactor : "使用"
+    Server --> SubReactor : "使用"
+    Server --> ThreadPool : "使用"
+    Server --> Acceptor : "使用"
+    Server --> EventLoop : "创建并使用"
+    Server --> Connection : "创建并使用"
+    Server --> Thread : "创建并使用"
+    Connection --> Channel : "使用"
+    Channel --> EventLoop : "注册事件"
+    Channel --> Functor : "设置回调"
+    EventLoop --> Channel : "调用回调"
+    ThreadPool --> Thread : "管理"
+    Thread --> EventLoop : "运行"
+
+```
+
+- 时序图
+```mermaid
+sequenceDiagram
+    participant MainReactor
+    participant SubReactor
+    participant Server
+    participant Acceptor
+    participant Socket
+    participant Connection
+    participant EventLoop
+    participant Thread
+    participant ThreadPool
+
+    Server->>MainReactor: start()
+    MainReactor->>Acceptor: listen()
+    loop 主循环
+        MainReactor->>Acceptor: acceptConnection()
+        Acceptor->>Socket: accept()
+        Socket->>Connection: create()
+        Server->>SubReactor: addConnection(Connection)
+        SubReactor->>EventLoop: runInLoop()
+        EventLoop->>Connection: handleReadEvent()
+        Connection->>Channel: setReadCallback()
+        Channel->>EventLoop: handleEvent()
+        EventLoop->>Connection: handleWriteEvent()
+    end
+    Server->>ThreadPool: submit(Task)
+    ThreadPool->>Thread: start()
+    Thread->>EventLoop: runInLoop()
+    EventLoop->>Connection: handleEvents()
+
+```
+
+- 流程图
+```mermaid
+flowchart TD
+    A[开始] --> B[创建 MainReactor]
+    B --> C[创建 SubReactor]
+    C --> D[创建 Server]
+    D --> E[启动 Server]
+    E --> F[创建 Acceptor]
+    F --> G[Acceptor 开始监听]
+    G --> H[进入主循环]
+    H --> I{是否有新连接}
+    I -->|是| J[Acceptor 接受新连接]
+    J --> K[创建 Connection]
+    K --> L[将 Connection 添加到 SubReactor]
+    L --> M[SubReactor 注册 Connection 事件]
+    M --> N[SubReactor 处理事件]
+    N --> O[Connection 读取数据]
+    O --> P[Connection 写回数据]
+    P --> Q[返回主循环]
+    I -->|否| R[继续等待]
+    R --> H
+
+```

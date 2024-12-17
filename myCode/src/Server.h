@@ -11,15 +11,20 @@
 #pragma once
 
 #include <map>
+#include <vector>
 class EventLoop;
 class Socket;
 class Acceptor;
 class Connection;
+class ThreadPool;
 class Server {
 private:
-    EventLoop *loop;
+    EventLoop *mainReadctor;
     Acceptor *acceptor;
+    ThreadPool *thpool;
+
     std::map<int, Connection*> connections;
+    std::vector<EventLoop *> subReadctors;
 public:
     Server(EventLoop*);
     ~Server();

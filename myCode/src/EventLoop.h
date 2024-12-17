@@ -19,7 +19,6 @@ class Channel;
 class EventLoop {
 private:
     Epoll *ep;
-    ThreadPool *threadPool;
     bool quit;
 
 public:

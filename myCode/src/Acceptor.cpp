@@ -29,7 +29,6 @@ Acceptor::Acceptor(EventLoop *_loop) : loop(_loop),sock(nullptr), accepChannel(n
   auto cb = std::bind(&Acceptor::acceptConnection, this);
   accepChannel->setReadCallback(cb);
   accepChannel->enableRead();
-  accepChannel->setUseThreadPool(false);
   delete addr;
 }
 

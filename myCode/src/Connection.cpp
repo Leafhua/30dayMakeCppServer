@@ -31,14 +31,13 @@
 // cpp成员变量声明顺序注意
 // 可能导致的问题：如果一个成员变量的初始化依赖于另一个成员变量的值，必须确保依赖的变量在前面声明并初始化。否则，可能会导致未定义行为。
 Connection::Connection(EventLoop *_loop, Socket *_sock)
-    : loop(_loop), sock(_sock), channel(nullptr), readBuffer(nullptr),
-      inBuffer(new std::string()) {
+    : loop(_loop), sock(_sock), channel(nullptr), readBuffer(nullptr)
+       {
   channel = new Channel(loop, sock->getFd());
   channel->enableRead();
   channel->useET();
   auto cb = std::bind(&Connection::echo, this, sock->getFd());
   channel->setReadCallback(cb);
-  channel->setUseThreadPool(true);
   readBuffer = new Buffer();
 }
 

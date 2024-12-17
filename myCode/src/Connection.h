@@ -25,7 +25,6 @@ private:
     Channel *channel;
     Buffer *readBuffer;
     std::function<void(int)> deleteConnectionCallback;
-    std::string *inBuffer;
 
 
 public:
