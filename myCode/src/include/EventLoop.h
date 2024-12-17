@@ -11,24 +11,22 @@
 
 #pragma once
 
-
 #include <functional>
+#include "Macros.h"
 class ThreadPool;
 class Epoll;
 class Channel;
 class EventLoop {
-private:
-    Epoll *ep;
-    bool quit;
+ public:
+  EventLoop();
+  ~EventLoop();
+  DISALLOW_COPY_AND_MOVE(EventLoop);
+  void Loop();
+  void UpdateChannel(Channel *);
 
-public:
-    EventLoop();
-    ~EventLoop();
+  void AddThread(std::function<void()>);
 
-    void loop();
-    void updateChannel(Channel*);
-
-    void addThread(std::function<void()>);
-
+ private:
+  Epoll *epoll_{nullptr};
+  bool quit_{false};
 };
-

@@ -10,43 +10,43 @@
  */
 
 #include "Acceptor.h"
-#include "Channel.h"
-#include "EventLoop.h"
-#include "InetAddress.h"
-#include "Socket.h"
+
 #include <arpa/inet.h>
-#include <cstdio>
-#include <functional>
 #include <netinet/in.h>
 
-Acceptor::Acceptor(EventLoop *_loop) : loop(_loop),sock(nullptr), accepChannel(nullptr) {
-  sock = new Socket();
+#include <cstdio>
+#include <functional>
+
+#include "Channel.h"
+#include "EventLoop.h"
+#include "Socket.h"
+
+Acceptor::Acceptor(EventLoop *_loop) : loop_(_loop), sock_(nullptr), channel_(nullptr) {
+  sock_ = new Socket();
   InetAddress *addr = new InetAddress("127.0.0.1", 8883);
-  sock->bind(addr);
-  sock->listen();
-//   sock->setnonblocking();
-  accepChannel = new Channel(loop, sock->getFd());
-  auto cb = std::bind(&Acceptor::acceptConnection, this);
-  accepChannel->setReadCallback(cb);
-  accepChannel->enableRead();
+  sock_->Bind(addr);
+  sock_->Listen();
+  //   sock->setnonblocking();
+  channel_ = new Channel(loop_, sock_->GetFd());
+  auto cb = std::bind(&Acceptor::AcceptConnection, this);
+  channel_->SetReadCallback(cb);
+  channel_->EnableRead();
   delete addr;
 }
 
 Acceptor::~Acceptor() {
-    delete sock;
-    delete accepChannel;
-
+  delete sock_;
+  delete channel_;
 }
 
-void Acceptor::acceptConnection() {
-    InetAddress *clnt_addr = new InetAddress();
-    Socket *clnt_sock = new Socket(sock->accept(clnt_addr));
-    printf("new client fd %d! IP:%s Port:%d\n",clnt_sock->getFd(), inet_ntoa(clnt_addr->getAddr().sin_addr), ntohs(clnt_addr->getAddr().sin_port));
-    clnt_sock->setnonblocking();
-    newConnectionCallback(clnt_sock);
-    delete clnt_addr;
+void Acceptor::AcceptConnection() {
+  InetAddress *clnt_addr = new InetAddress();
+  Socket *clnt_sock = new Socket(sock_->Accept(clnt_addr));
+  printf("new client fd %d! IP:%s Port:%d\n", clnt_sock->GetFd(), inet_ntoa(clnt_addr->GetAddr().sin_addr),
+         ntohs(clnt_addr->GetAddr().sin_port));
+  clnt_sock->Setnonblocking();
+  new_connection_callback_(clnt_sock);
+  delete clnt_addr;
 }
 
-void Acceptor::setNewConnectionCallback(std::function<void (Socket *)> _cb) {
-    newConnectionCallback = _cb;
-}
+void Acceptor::SetNewConnectionCallback(std::function<void(Socket *)> _cb) { new_connection_callback_ = _cb; }

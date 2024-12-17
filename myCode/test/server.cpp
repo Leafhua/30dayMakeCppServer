@@ -9,12 +9,15 @@
  *
  */
 
-#include "src/EventLoop.h"
-#include "src/Server.h"
+#include "Server.h"
+
+#include "EventLoop.h"
 
 int main() {
   EventLoop *loop = new EventLoop();
   Server *server = new Server(loop);
-  loop->loop();
+  loop->Loop();
+  delete server;
+  delete loop;
   return 0;
 }

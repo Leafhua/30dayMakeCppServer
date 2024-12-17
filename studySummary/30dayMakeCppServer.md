@@ -664,3 +664,13 @@ flowchart TD
     R --> H
 
 ```
+## day13
+工程化，使用cmake构建工程，使用google格式
+- 设置CMakeLists.txt
+  - set(CMAKE_EXPORT_COMPILE_COMMANDS ON)需设置在project()之前，否则无法生成compile_commands.json文件。同时需注意ide（vscode）是否设置默认clang-tidy  compile_commands规则，否则compile_commands.json不会生效
+- 设置build_support 
+  build support中包含几个python脚本
+  - windows转linux会造成格式错误，需设置CRLF为LF，同时设置\r\n为\n(windows与linux换行符不同)，导致python脚本无法运行
+  - Ubuntu系统未设置python环境，需手动调整/usr/bin/python3为python
+>bug依旧存在，随着项目越来越大，debug开始变得困难
+  

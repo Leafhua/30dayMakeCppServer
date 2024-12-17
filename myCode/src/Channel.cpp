@@ -10,53 +10,53 @@
  */
 
 #include "Channel.h"
-#include "Epoll.h"
-#include "EventLoop.h"
-#include <cstdint>
+
 #include <sys/epoll.h>
 #include <unistd.h>
 
+#include <cstdint>
+
+#include "Epoll.h"
+#include "EventLoop.h"
+
 Channel::Channel(EventLoop *_loop, int _fd)
-    : loop(_loop), fd(_fd), events(0), ready(0), inEpoll(false) {}
+    : loop_(_loop), fd_(_fd), listen_events_(0), ready_events_(0), in_epoll_(false) {}
 Channel::~Channel() {
-  if (fd != -1) {
-    close(fd);
-    fd = -1;
+  if (fd_ != -1) {
+    close(fd_);
+    fd_ = -1;
   }
 }
 
-void Channel::handleEvent() {
-  if (ready & (EPOLLIN | EPOLLPRI)) {
-
-    readCallback();
+void Channel::HandleEvent() {
+  if (ready_events_ & (EPOLLIN | EPOLLPRI)) {
+    read_callback_();
   }
-  if (ready & (EPOLLOUT)) {
-
-    writeCallback();
+  if (ready_events_ & (EPOLLOUT)) {
+    write_callback_();
   }
 }
 
-void Channel::enableRead() {
-  events = EPOLLIN | EPOLLET;
-  loop->updateChannel(this);
+void Channel::EnableRead() {
+  listen_events_ = EPOLLIN | EPOLLET;
+  loop_->UpdateChannel(this);
 }
 
-void Channel::useET() {
-  events |= EPOLLET;
-  loop->updateChannel(this);
+void Channel::UseET() {
+  listen_events_ |= EPOLLET;
+  loop_->UpdateChannel(this);
 }
 
-int Channel::getFd() { return fd; }
+int Channel::GetFd() { return fd_; }
 
-uint32_t Channel::getEvents() { return events; }
+uint32_t Channel::GetListenEvents() { return listen_events_; }
 
-uint32_t Channel::getReady() { return ready; }
+uint32_t Channel::GetReadyEvents() { return ready_events_; }
 
-bool Channel::getInEpoll() { return inEpoll; }
+bool Channel::GetInEpoll() { return in_epoll_; }
 
-void Channel::setInEpoll(bool _in) { inEpoll = _in; }
+void Channel::SetInEpoll(bool _in) { in_epoll_ = _in; }
 
-void Channel::setReady(uint32_t _ev) { ready = _ev; }
+void Channel::SetReadyEvents(uint32_t _ev) { ready_events_ = _ev; }
 
-void Channel::setReadCallback(std::function<void()> _cb) { readCallback = _cb; }
-
+void Channel::SetReadCallback(std::function<void()> _cb) { read_callback_ = _cb; }

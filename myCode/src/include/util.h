@@ -1,17 +1,13 @@
 /**
  * @file util.h
  * @author penghua zhu (zphzhupenghua@outlook.com)
- * @brief 
+ * @brief
  * @version 0.1
  * @date 2024-12-08
- * 
- * 
+ *
+ *
  */
 
-#ifndef UTIL_H
-#define UTIL_H
+#pragma once
 
-void errif(bool, const char *);
-
-
-#endif
+void ErrorIf(bool condition, const char *msg);
