@@ -15,14 +15,17 @@
 #include <strings.h>
 #include <unistd.h>
 #include <cerrno>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
+#include <utility>
 #include "Acceptor.h"
 #include "Channel.h"
 #include "Connection.h"
 #include "EventLoop.h"
 #include "Socket.h"
 #include "ThreadPool.h"
+#include "util.h"
 
 #define READ_BUFFER 1024
 
@@ -49,23 +52,25 @@ Server::~Server() {
 }
 
 void Server::NewConnection(Socket *sock) {
-  if (sock->GetFd() != -1) {
-    int random = sock->GetFd() % sub_readctors_.size();
-    Connection *conn = new Connection(sub_readctors_[random], sock);
-    auto cb = std::bind(&Server::DeleteConnection, this, std::placeholders::_1);
-    conn->SetDeleteConnectionCallback(cb);
-    connections_[sock->GetFd()] = conn;
+  ErrorIf(sock->GetFd() == -1, "new connection error");
+  uint64_t random = sock->GetFd() % sub_readctors_.size();
+  Connection *conn = new Connection(sub_readctors_[random], sock);
+  auto cb = std::bind(&Server::DeleteConnection, this, std::placeholders::_1);
+  conn->SetDeleteConnectionCallback(cb);
+  conn->SetOnConnectCallback(on_connect_callback_);
+  connections_[sock->GetFd()] = conn;
+}
+
+void Server::DeleteConnection(Socket *sock) {
+  int sockfd = sock->GetFd();
+  auto it = connections_.find(sockfd);
+  if (it != connections_.end()) {
+    Connection *conn = connections_[sockfd];
+    connections_.erase(sockfd);
+    // close(sockfd);
+    delete conn;
+    conn = nullptr;
   }
 }
 
-void Server::DeleteConnection(int sockfd) {
-  if (sockfd != -1) {
-    auto it = connections_.find(sockfd);
-    if (it != connections_.end()) {
-      Connection *conn = connections_[sockfd];
-      connections_.erase(sockfd);
-      // close(sockfd);
-      delete conn;
-    }
-  }
-}
+void Server::OnConnect(std::function<void(Connection *)> fn) { on_connect_callback_ = std::move(fn); }

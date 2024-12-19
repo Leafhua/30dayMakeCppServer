@@ -674,3 +674,6 @@ flowchart TD
   - Ubuntu系统未设置python环境，需手动调整/usr/bin/python3为python
 >bug依旧存在，随着项目越来越大，debug开始变得困难
   
+
+## day14
+重构connection，将echo操作拆分出来支持

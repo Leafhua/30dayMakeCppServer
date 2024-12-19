@@ -43,10 +43,12 @@ class Socket {
   DISALLOW_COPY_AND_MOVE(Socket);
   void Bind(InetAddress *);
   void Listen();
-  void Setnonblocking();
   void Connect(InetAddress *);
+  void Connect(const char *ip, uint16_t port);
 
   int Accept(InetAddress *);
 
+  void Setnonblocking();
+  bool IsNonBlocking();
   int GetFd();
 };

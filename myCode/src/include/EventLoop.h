@@ -24,7 +24,6 @@ class EventLoop {
   void Loop();
   void UpdateChannel(Channel *);
 
-  void AddThread(std::function<void()>);
 
  private:
   Epoll *epoll_{nullptr};

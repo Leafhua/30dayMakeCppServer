@@ -10,6 +10,7 @@
  */
 #pragma once
 
+#include <functional>
 #include <map>
 #include <vector>
 #include "Macros.h"
@@ -28,6 +29,8 @@ class Server {
   std::map<int, Connection *> connections_;
   std::vector<EventLoop *> sub_readctors_;
 
+  std::function<void(Connection *)> on_connect_callback_;
+
  public:
   explicit Server(EventLoop *);
   ~Server();
@@ -35,5 +38,6 @@ class Server {
   DISALLOW_COPY_AND_MOVE(Server);
 
   void NewConnection(Socket *sock);
-  void DeleteConnection(int sockfd);
+  void DeleteConnection(Socket *sock);
+  void OnConnect(std::function<void(Connection *)> fn);
 };
