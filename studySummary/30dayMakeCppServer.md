@@ -676,4 +676,40 @@ flowchart TD
   
 
 ## day14
-重构connection，将echo操作拆分出来支持
+重构connection，将echo操作拆分出来支持业务逻辑自定义，消息发送通过server中lambda表达式实现
+更新Server类，使其可以设置非阻塞模式。
+重构后的connection,WriteNonBlocking方法
+```mermaid
+flowchart TD
+    A[开始] --> B{循环写入数据}
+    B --> C{写入成功}
+    C -->|是| D[减少剩余数据量]
+    C -->|否| E{检查错误码}
+    E -->|EINTR| B
+    E -->|EAGAIN| F[结束写入]
+    E -->|其他错误| G[设置状态为关闭并打印信息]
+
+```
+重构后的Server类
+```mermaid
+flowchart TD
+    A[开始] --> B{初始化主线程事件循环}
+    B --> C[创建Acceptor对象]
+    C --> D[设置新连接回调]
+    D --> E[初始化线程池]
+    E --> F[为每个子线程创建事件循环]
+    F --> G[启动子线程]
+
+    H[等待新连接] --> I{接收到新连接}
+    I -->|是| J[选择子线程]
+    J --> K[创建连接对象]
+    K --> L[设置连接回调]
+    L --> M[保存连接]
+
+    N[等待删除连接请求] --> O{接收到删除请求}
+    O -->|是| P[查找并删除连接]
+    P --> Q[释放连接资源]
+
+    R[设置连接建立回调] --> S[保存回调函数]
+
+```
