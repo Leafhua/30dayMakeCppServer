@@ -13,9 +13,8 @@
 
 #include <functional>
 #include "Macros.h"
-class ThreadPool;
-class Epoll;
 class Channel;
+class Poller;
 class EventLoop {
  public:
   EventLoop();
@@ -23,9 +22,11 @@ class EventLoop {
   DISALLOW_COPY_AND_MOVE(EventLoop);
   void Loop();
   void UpdateChannel(Channel *);
+  void DeleteChannel(Channel *);
+  void Quit();
 
 
  private:
-  Epoll *epoll_{nullptr};
+  Poller *poller_{nullptr};
   bool quit_{false};
 };

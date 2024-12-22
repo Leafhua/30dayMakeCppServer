@@ -16,18 +16,19 @@
 
 #include <cstdio>
 #include <functional>
+#include <utility>
 
 #include "Channel.h"
 #include "EventLoop.h"
 #include "Socket.h"
 
-Acceptor::Acceptor(EventLoop *_loop) : loop_(_loop), sock_(nullptr), channel_(nullptr) {
-  sock_ = new Socket();
+Acceptor::Acceptor(EventLoop *_loop) : loop_(_loop), sock_(new Socket()), channel_(nullptr) {
+  
   InetAddress *addr = new InetAddress("127.0.0.1", 8883);
   sock_->Bind(addr);
   sock_->Listen();
   //   sock->setnonblocking();
-  channel_ = new Channel(loop_, sock_->GetFd());
+  channel_ = new Channel(loop_, sock_);
   auto cb = std::bind(&Acceptor::AcceptConnection, this);
   channel_->SetReadCallback(cb);
   channel_->EnableRead();
@@ -42,11 +43,12 @@ Acceptor::~Acceptor() {
 void Acceptor::AcceptConnection() {
   InetAddress *clnt_addr = new InetAddress();
   Socket *clnt_sock = new Socket(sock_->Accept(clnt_addr));
-  printf("new client fd %d! IP:%s Port:%d\n", clnt_sock->GetFd(), inet_ntoa(clnt_addr->GetAddr().sin_addr),
-         ntohs(clnt_addr->GetAddr().sin_port));
   clnt_sock->Setnonblocking();
+  if (new_connection_callback_) {
   new_connection_callback_(clnt_sock);
+  }
+  
   delete clnt_addr;
 }
 
-void Acceptor::SetNewConnectionCallback(std::function<void(Socket *)> _cb) { new_connection_callback_ = _cb; }
+void Acceptor::SetNewConnectionCallback(std::function<void(Socket *)> const &callback) { new_connection_callback_ = std::move(callback); }

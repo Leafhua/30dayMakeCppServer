@@ -11,8 +11,8 @@
 #include <cstring>
 #include "util.h"
 
-Socket::Socket() {
-  fd_ = socket(AF_INET, SOCK_STREAM, 0);
+Socket::Socket() : fd_(socket(AF_INET, SOCK_STREAM, 0)) {
+  // fd_ = socket(AF_INET, SOCK_STREAM, 0);
   ErrorIf(fd_ == -1, "socket create error");
 }
 Socket::Socket(int _fd) : fd_(_fd) { ErrorIf(fd_ == -1, "socket create error"); }
@@ -44,7 +44,7 @@ int Socket::Accept(InetAddress *_addr) {
   int clnt_sockfd = -1;
   struct sockaddr_in tmp_addr {};
   socklen_t addr_len = sizeof(tmp_addr);
-  if (fcntl(fd_, F_GETFL) & O_NONBLOCK) {
+  if (IsNonBlocking()) {
     while (true) {
       clnt_sockfd = accept(fd_, (sockaddr *)&tmp_addr, &addr_len);
       if (clnt_sockfd == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) {
@@ -98,8 +98,8 @@ void Socket::Connect(InetAddress *_addr) {
   }
 }
 
-void Socket::Connect(const char *ip, uint16_t port) {
-  InetAddress *addr = new InetAddress(ip, port);
+void Socket::Connect(const char *_ip, uint16_t port) {
+  InetAddress *addr = new InetAddress(_ip, port);
   Connect(addr);
   delete addr;
 }
@@ -107,10 +107,10 @@ void Socket::Connect(const char *ip, uint16_t port) {
 int Socket::GetFd() { return fd_; }
 
 InetAddress::InetAddress() = default;
-InetAddress::InetAddress(const char *ip, uint16_t port) {
+InetAddress::InetAddress(const char *_ip, uint16_t port) {
   memset(&addr_, 0, sizeof(addr_));
   addr_.sin_family = AF_INET;
-  addr_.sin_addr.s_addr = inet_addr(ip);
+  addr_.sin_addr.s_addr = inet_addr(_ip);
   addr_.sin_port = htons(port);
 }
 

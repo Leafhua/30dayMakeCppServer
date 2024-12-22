@@ -14,9 +14,7 @@
 #include <iostream>
 #include <string>
 
-Buffer::Buffer() {}
 
-Buffer::~Buffer() {}
 
 void Buffer::Append(const char *_str, int _size) {
   for (int i = 0; i < _size; ++i) {

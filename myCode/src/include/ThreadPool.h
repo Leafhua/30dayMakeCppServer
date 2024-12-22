@@ -11,6 +11,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <condition_variable>  // NOLINT
 #include <functional>
 #include <future>  // NOLINT
@@ -29,8 +30,7 @@ class ThreadPool {
   std::queue<std::function<void()>> tasks_;
   std::mutex queue_mutex_;
   std::condition_variable condition_variable_;
-
-  bool stop_{false};
+  std::atomic<bool> stop_{false};
 
  public:
   explicit ThreadPool(unsigned int size = std::thread::hardware_concurrency());

@@ -20,26 +20,30 @@ class Socket;
 class Buffer;
 class Connection {
  public:
- enum State {
-  Invalid = 1,
-  Hadnshaking,
-  Connected,
-  Closed,
-  Failed,
+  enum State {
+    Invalid = 1,
+    Hadnshaking,
+    Connected,
+    Closed,
+    Failed,
 
- };
+  };
   Connection(EventLoop *_loop, Socket *_sock);
   ~Connection();
   DISALLOW_COPY_AND_MOVE(Connection)
 
   void Read();
   void Write();
+  void Send(std::string msg);
 
   void SetOnConnectCallback(std::function<void(Connection *)> const &callback);
   void SetDeleteConnectionCallback(std::function<void(Socket *)> const &callback);
+  void SetOnMessageCallback(std::function<void(Connection *)> const &callback);
   void Close();
+  void Business();
+
   State GetState();
-  
+
   Buffer *GetReadBuffer();
   const char *ReadBuffer();
 
@@ -50,7 +54,8 @@ class Connection {
 
   Socket *GetSocket();
 
-  void OnConnect(std::function<void()> fn);
+  void OnConnect(std::function<void()> _fn);
+  void OnMessage(std::function<void()> _fn);
 
  private:
   EventLoop *loop_;
@@ -62,6 +67,7 @@ class Connection {
   std::function<void(Socket *)> delete_connectioin_callback_;
 
   std::function<void(Connection *)> on_connect_callback_;
+  std::function<void(Connection *)> on_message_callback_;
 
   void ReadNonBlocking();
   void WriteNonBlocking();

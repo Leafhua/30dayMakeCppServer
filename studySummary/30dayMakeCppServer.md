@@ -713,3 +713,52 @@ flowchart TD
     R[设置连接建立回调] --> S[保存回调函数]
 
 ```
+## day15
+添加macOS支持，使用Poller代替Epoll
+Poller控制流图
+```mermaid
+flowchart TD
+    A[开始] --> B{操作系统是 Linux?}
+    B -->|Yes| C[使用 epoll 初始化]
+    B -->|No| D[使用 kqueue 初始化]
+
+    subgraph Linux 实现
+    C --> E[创建 epoll 文件描述符]
+    E --> F[初始化事件数组]
+    end
+
+    subgraph MacOS 实现
+    D --> G[创建 kqueue 文件描述符]
+    G --> H[初始化事件数组]
+    end
+
+    I[调用 Poll 方法] --> J{操作系统是 Linux?}
+    J -->|Yes| K[调用 epoll_wait]
+    J -->|No| L[调用 kevent]
+
+    M[调用 UpdateChannel 方法] --> N{操作系统是 Linux?}
+    N -->|Yes| O[使用 epoll_ctl 更新通道]
+    N -->|No| P[使用 kevent 更新通道]
+
+    Q[调用 DeleteChannel 方法] --> R{操作系统是 Linux?}
+    R -->|Yes| S[使用 epoll_ctl 删除通道]
+    R -->|No| T[使用 kevent 删除通道]
+
+    U[结束]
+
+```
+
+
+
+1. **初始化**：
+   - 根据操作系统选择不同的多路复用机制（`epoll` 或 `kqueue`），并初始化文件描述符和事件数组。
+
+2. **Poll 方法**：
+   - 等待事件发生，并返回就绪的通道列表。根据操作系统调用不同的系统调用（`epoll_wait` 或 `kevent`）。
+
+3. **UpdateChannel 方法**：
+   - 更新或添加通道到多路复用器中。根据操作系统调用不同的系统调用（`epoll_ctl` 或 `kevent`）。
+
+4. **DeleteChannel 方法**：
+   - 从多路复用器中删除通道。根据操作系统调用不同的系统调用（`epoll_ctl` 或 `kevent`）。
+

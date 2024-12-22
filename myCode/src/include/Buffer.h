@@ -16,8 +16,8 @@
 #include "Macros.h"
 class Buffer {
  public:
-  Buffer();
-  ~Buffer();
+  Buffer() = default;
+  ~Buffer() = default;
 
   DISALLOW_COPY_AND_MOVE(Buffer);
 

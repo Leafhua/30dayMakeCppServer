@@ -18,7 +18,7 @@
 class InetAddress {
  public:
   InetAddress();
-  InetAddress(const char *ip, uint16_t port);
+  InetAddress(const char *_ip, uint16_t port);
   ~InetAddress() = default;
 
   DISALLOW_COPY_AND_MOVE(InetAddress);
@@ -29,7 +29,7 @@ class InetAddress {
   uint16_t GetPort();
 
  private:
-  struct sockaddr_in addr_;
+  struct sockaddr_in addr_ = {};
 };
 class Socket {
  private:
@@ -41,10 +41,10 @@ class Socket {
   ~Socket();
 
   DISALLOW_COPY_AND_MOVE(Socket);
-  void Bind(InetAddress *);
+  void Bind(InetAddress *_addr);
   void Listen();
   void Connect(InetAddress *);
-  void Connect(const char *ip, uint16_t port);
+  void Connect(const char *_ip, uint16_t port);
 
   int Accept(InetAddress *);
 
