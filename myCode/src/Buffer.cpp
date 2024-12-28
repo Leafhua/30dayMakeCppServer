@@ -14,7 +14,19 @@
 #include <iostream>
 #include <string>
 
+// TODO(hua): 未声明问题，目前不知道为什么tidy会报错
 
+
+const std::string &Buffer::Buf() const { return buf_; }
+
+const char *Buffer::CStr() const { return buf_.c_str(); }
+
+size_t Buffer::Size() const { return buf_.size(); }
+
+void Buffer::SetBuf(const char *_buf) {
+  std::string new_buf(_buf);
+  buf_.swap(new_buf);
+}
 
 void Buffer::Append(const char *_str, int _size) {
   for (int i = 0; i < _size; ++i) {
@@ -25,18 +37,4 @@ void Buffer::Append(const char *_str, int _size) {
   }
 }
 
-ssize_t Buffer::Size() { return buf_.size(); }
-
-const char *Buffer::ToStr() { return buf_.c_str(); }
-
 void Buffer::Clear() { buf_.clear(); }
-
-void Buffer::Getline() {
-  buf_.clear();
-  std::getline(std::cin, buf_);
-}
-
-void Buffer::SetBuf(const char *_buf) {
-  buf_.clear();
-  buf_.append(_buf);
-}

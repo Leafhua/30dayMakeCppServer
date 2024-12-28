@@ -1,21 +1,23 @@
 #include "Socket.h"
 #include <arpa/inet.h>
 #include <asm-generic/errno.h>
+#include <asm-generic/ioctls.h>
 #include <fcntl.h>
 #include <netinet/in.h>
 #include <strings.h>
+#include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <cerrno>
+#include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <string>
+#include "common.h"
 #include "util.h"
 
-Socket::Socket() : fd_(socket(AF_INET, SOCK_STREAM, 0)) {
-  // fd_ = socket(AF_INET, SOCK_STREAM, 0);
-  ErrorIf(fd_ == -1, "socket create error");
-}
-Socket::Socket(int _fd) : fd_(_fd) { ErrorIf(fd_ == -1, "socket create error"); }
+Socket::Socket() : fd_(-1) {}
 
 Socket::~Socket() {
   if (fd_ != -1) {
@@ -24,100 +26,103 @@ Socket::~Socket() {
   }
 }
 
-void Socket::Bind(InetAddress *_addr) {
-  struct sockaddr_in tmp_addr = _addr->GetAddr();
-  ErrorIf(::bind(fd_, (sockaddr *)&tmp_addr, sizeof(tmp_addr)) == -1, "socket bind error");
+void Socket::SetFd(int _fd) { fd_ = _fd; }
+
+int Socket::Fd() const { return fd_; }
+
+std::string Socket::GetAddr() const {
+  struct sockaddr_in addr {};
+  memset(&addr, 0, sizeof(addr));
+  socklen_t len = sizeof(addr);
+  if (getpeername(fd_, (struct sockaddr *)&addr, &len) == -1) {
+    return "";
+  }
+  char ipstr[INET_ADDRSTRLEN];
+  if (inet_ntop(AF_INET, &addr.sin_addr, ipstr, sizeof(ipstr)) == nullptr) {
+    return "";
+  }
+
+  std::string ret(ipstr);
+  ret += ":";
+  ret += std::to_string(htons(addr.sin_port));
+  return ret;
 }
 
-void Socket::Listen() { ErrorIf(::listen(fd_, SOMAXCONN) == -1, "socket listen error"); }
-
-void Socket::Setnonblocking() {
+RC Socket::SetNonBlocking() const {
   // 设置非阻塞 优雅的操作，fcntl(fd, F_GETFL)获取fd的状态，O_RDONLY(00) || O_WRONLY(01),之后与O_NONBLOCK(04000)按位或
   // 设置O_RDONLY(00)|O_NONBLOCK(04000) 或者O_WRONLY(01)|O_NONBLOCK(04000)
-  fcntl(fd_, F_SETFL, fcntl(fd_, F_GETFL) | O_NONBLOCK);
-}
-
-bool Socket::IsNonBlocking() { return (fcntl(fd_, F_GETFL) & O_NONBLOCK) != 0; }
-
-int Socket::Accept(InetAddress *_addr) {
-  // for server socket
-  int clnt_sockfd = -1;
-  struct sockaddr_in tmp_addr {};
-  socklen_t addr_len = sizeof(tmp_addr);
-  if (IsNonBlocking()) {
-    while (true) {
-      clnt_sockfd = accept(fd_, (sockaddr *)&tmp_addr, &addr_len);
-      if (clnt_sockfd == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK))) {
-        // printf("no connection yet\n");
-        continue;
-      }
-      if (clnt_sockfd == -1) {
-        ErrorIf(true, "socket accept error");
-      } else {
-        break;
-      }
-    }
-  } else {
-    clnt_sockfd = accept(fd_, (sockaddr *)&tmp_addr, &addr_len);
-    ErrorIf(clnt_sockfd == -1, "socket accept error");
+  if (fcntl(fd_, F_SETFL, fcntl(fd_, F_GETFL) | O_NONBLOCK) == -1) {
+    perror("Socket set nonblocking failed");
+    return RC_SOCKET_ERROR;
   }
-  _addr->SetAddr(tmp_addr);
-  return clnt_sockfd;
+  return RC_SUCCESS;
 }
 
-void Socket::Connect(InetAddress *_addr) {
-  struct sockaddr_in tmp_addr = _addr->GetAddr();
-  if (fcntl(fd_, F_GETFL) & O_NONBLOCK) {
-    while (true) {
-      int ret = connect(fd_, (sockaddr *)&tmp_addr, sizeof(tmp_addr));
-      if (ret == 0) {
-        break;
-      }
-      if (ret == -1 && (errno == EINPROGRESS)) {
-        continue;
-        /* 连接非阻塞式sockfd建议的做法：
-              The socket is nonblocking and the connection cannot be
-          completed immediately.  (UNIX domain sockets failed with
-          EAGAIN instead.)  It is possible to select(2) or poll(2)
-          for completion by selecting the socket for writing.  After
-          select(2) indicates writability, use getsockopt(2) to read
-          the SO_ERROR option at level SOL_SOCKET to determine
-          whether connect() completed successfully (SO_ERROR is
-          zero) or unsuccessfully (SO_ERROR is one of the usual
-          error codes listed here, explaining the reason for the
-          failure).
-          这里为了简单、不断连接直到连接完成，相当于阻塞式
-        */
-      }
-      if (ret == -1) {
-        ErrorIf(true, "socket connect error");
-      }
-    }
-  } else {
-    ErrorIf(::connect(fd_, (sockaddr *)&tmp_addr, sizeof(tmp_addr)) == -1, "socket connect error");
+bool Socket::IsNonBlocking() const { return (fcntl(fd_, F_GETFL) & O_NONBLOCK) != 0; }
+
+size_t Socket::RecvBufSize() const {
+  size_t size = -1;
+  if (ioctl(fd_, FIONREAD, &size) == -1) {
+    perror("Socket get recv buf size failed");
   }
+  return size;
 }
 
-void Socket::Connect(const char *_ip, uint16_t port) {
-  InetAddress *addr = new InetAddress(_ip, port);
-  Connect(addr);
-  delete addr;
+RC Socket::Create() {
+  assert(fd_ == -1);
+  fd_ = socket(AF_INET, SOCK_STREAM, 0);
+  if (fd_ == -1) {
+    perror("Failed to create socket");
+    return RC_SOCKET_ERROR;
+  }
+  return RC_SUCCESS;
 }
 
-int Socket::GetFd() { return fd_; }
-
-InetAddress::InetAddress() = default;
-InetAddress::InetAddress(const char *_ip, uint16_t port) {
-  memset(&addr_, 0, sizeof(addr_));
-  addr_.sin_family = AF_INET;
-  addr_.sin_addr.s_addr = inet_addr(_ip);
-  addr_.sin_port = htons(port);
+RC Socket::Bind(const char *_ip, uint16_t _port) const {
+  assert(fd_ != -1);
+  struct sockaddr_in addr {};
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(_ip);
+  addr.sin_port = htons(_port);
+  if (::bind(fd_, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+    perror("Failed to bind socket");
+    return RC_SOCKET_ERROR;
+  }
+  return RC_SUCCESS;
 }
 
-void InetAddress::SetAddr(sockaddr_in addr) { addr_ = addr; }
+RC Socket::Listen() const {
+  assert(fd_ != -1);
+  if (::listen(fd_, SOMAXCONN) == -1) {
+    perror("Failed to listen socket");
+    return RC_SOCKET_ERROR;
+  }
+  return RC_SUCCESS;
+}
 
-sockaddr_in InetAddress::GetAddr() { return addr_; }
+RC Socket::Accept(int &clnt_fd) const {
+  // TODO(HUA) non-blocking
+  assert(fd_ != -1);
+  clnt_fd = ::accept(fd_, nullptr, nullptr);
+  if (clnt_fd == -1) {
+    perror("Failed to accept socket");
+    return RC_SOCKET_ERROR;
+  }
+  return RC_SUCCESS;
+}
 
-const char *InetAddress::GetIp() { return inet_ntoa(addr_.sin_addr); }
+RC Socket::Connect(const char *_ip, uint16_t _port) const {
+  // TODO(HUA) non-blocking
 
-uint16_t InetAddress::GetPort() { return ntohs(addr_.sin_port); }
+  struct sockaddr_in addr {};
+  memset(&addr, 0, sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = inet_addr(_ip);
+  addr.sin_port = htons(_port);
+  if (::connect(fd_, (struct sockaddr *)&addr, sizeof(addr)) == -1) {
+    perror("Failed to connect socket");
+    return RC_SOCKET_ERROR;
+  }
+  return RC_SUCCESS;
+}

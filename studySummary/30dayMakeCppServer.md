@@ -762,3 +762,12 @@ flowchart TD
 4. **DeleteChannel 方法**：
    - 从多路复用器中删除通道。根据操作系统调用不同的系统调用（`epoll_ctl` 或 `kevent`）。
 
+## day16
+
+主要使用智能指针重构了整个项目，统一命名规则。
+
+16天教程完成，但还有诸多问题，assert断言不是很明白，前几天错误出在这里，目前所有功能大部分能实现，但仍存在bug
+
+- bug1：新连接添加时出现`epoll add error: File exists`
+- bug2：多次连接时断开一个连接出现`epoll delete error: Bad file descriptor` `Segmentation fault`，程序自动退出，且大概率伴随端口重复占用
+- bug3：重复多线程并发测试不理想，多个连接断开

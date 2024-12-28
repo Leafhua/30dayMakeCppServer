@@ -17,7 +17,6 @@
 enum ExceptionType {
   INVALID = 0,
   INVALID_SOCKET = 1
-
 };
 
 class Exception : public std::runtime_error {
@@ -43,7 +42,6 @@ class Exception : public std::runtime_error {
     }
   }
 
-  private:
-    ExceptionType type_;
-
+ private:
+  ExceptionType type_;
 };

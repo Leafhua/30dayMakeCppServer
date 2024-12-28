@@ -10,33 +10,29 @@
  */
 
 #include <unistd.h>
-#include <cstring>
 
-#include <functional>
 #include <iostream>
 
-#include "Buffer.h"
-#include "Connection.h"
-#include "Socket.h"
-#include "ThreadPool.h"
-#include "util.h"
+#include "pine.h"
 
 void OneClient(int msgs, int wait) {
   Socket *sock = new Socket;
+  sock->Create();
   sock->Connect("127.0.0.1", 8883);
-  Connection *conn = new Connection(nullptr, sock);
+  Connection *conn = new Connection(sock->Fd(), nullptr);
   sleep(wait);
   int count = 0;
   while (count < msgs) {
-    conn->SetSendBuffer("I'm client!");
+    conn->SetSendBuf("I'm client!");
     conn->Write();
     if (conn->GetState() == Connection::State::Closed) {
       conn->Close();
       break;
     }
     conn->Read();
-    std::cout << "msg count " << count++ << ": " << conn->ReadBuffer() << std::endl;
+    std::cout << "msg count " << count++ << ": " << conn->ReadBuf()->CStr() << std::endl;
   }
+  delete sock;
   delete conn;
 }
 
@@ -44,10 +40,10 @@ int main(int argc, char *argv[]) {
   int threads = 100;
   int msgs = 100;
   int wait = 0;
-  int o = -1;
+  int opt_char = -1;
   const char *optstring = "t:m:w:";
-  while ((o = getopt(argc, argv, optstring)) != -1) {
-    switch (o) {
+  while ((opt_char = getopt(argc, argv, optstring)) != -1) {
+    switch (opt_char) {
       case 't':
         threads = std::stoi(optarg);
         break;

@@ -12,12 +12,10 @@
 #pragma once
 
 #include <functional>
+#include <memory>
 #include <string>
-#include "Macros.h"
-class EventLoop;
-class Channel;
-class Socket;
-class Buffer;
+#include "common.h"
+
 class Connection {
  public:
   enum State {
@@ -26,51 +24,44 @@ class Connection {
     Connected,
     Closed,
     Failed,
-
   };
-  Connection(EventLoop *_loop, Socket *_sock);
+  DISALLOW_COPY_AND_MOVE(Connection);
+  Connection(int _fd, EventLoop *_loop);
   ~Connection();
-  DISALLOW_COPY_AND_MOVE(Connection)
 
-  void Read();
-  void Write();
-  void Send(std::string msg);
+  void SetOnConnect(std::function<void(Connection *)> const &_fn);
+  void SetDeleteConnection(std::function<void(int)> const &_fn);
+  void SetOnRecv(std::function<void(Connection *)> const &_fn);
 
-  void SetOnConnectCallback(std::function<void(Connection *)> const &callback);
-  void SetDeleteConnectionCallback(std::function<void(Socket *)> const &callback);
-  void SetOnMessageCallback(std::function<void(Connection *)> const &callback);
+  [[nodiscard]] State GetState() const;
+  [[nodiscard]] Socket *GetSocket() const;
+  void SetSendBuf(const char *_str);
+  Buffer *ReadBuf();
+  Buffer *SendBuf();
+
+  RC Read();
+  RC Write();
+  RC Send(const std::string &msg);
+
   void Close();
-  void Business();
-
-  State GetState();
-
-  Buffer *GetReadBuffer();
-  const char *ReadBuffer();
-
-  void SetSendBuffer(const char *str);
-  Buffer *GetSendBuffer();
-  const char *SendBuffer();
-  void GetlineSendBuffer();
-
-  Socket *GetSocket();
 
   void OnConnect(std::function<void()> _fn);
   void OnMessage(std::function<void()> _fn);
 
  private:
-  EventLoop *loop_;
-  Socket *sock_;
-  Channel *channel_{nullptr};
-  State state_{State::Invalid};
-  Buffer *read_buffer_{nullptr};
-  Buffer *send_buffer_{nullptr};
-  std::function<void(Socket *)> delete_connectioin_callback_;
+  std::unique_ptr<Channel> channel_;
+  std::unique_ptr<Socket> socket_;
 
-  std::function<void(Connection *)> on_connect_callback_;
-  std::function<void(Connection *)> on_message_callback_;
+  enum State state_;
+  std::unique_ptr<Buffer> read_buf_;
+  std::unique_ptr<Buffer> send_buf_;
 
-  void ReadNonBlocking();
-  void WriteNonBlocking();
-  void ReadBlocking();
-  void WriteBlocking();
+  std::function<void(int)> delete_connection_;
+  std::function<void(Connection *)> on_recv_;
+
+  RC ReadNonBlocking();
+  RC WriteNonBlocking();
+  RC ReadBlocking();
+  RC WriteBlocking();
+  void Business();
 };

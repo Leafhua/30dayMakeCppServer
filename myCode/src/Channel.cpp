@@ -19,14 +19,16 @@
 #include "EventLoop.h"
 #include "Socket.h"
 
-const int Channel::READ_EVENT = 1;
-const int Channel::WRITE_EVENT = 2;
-const int Channel::ET = 4;
+const int16_t Channel::READ_EVENT = 1;
+const int16_t Channel::WRITE_EVENT = 2;
+const int16_t Channel::EDGE_TRIGGERED = 4;
 
-Channel::Channel(EventLoop *_loop, Socket *_socket) : loop_(_loop), socket_(_socket) {}
+Channel::Channel(int _fd, EventLoop *_loop)
+    : fd_(_fd), loop_(_loop), listen_events_(0), ready_events_(0), exist_(false) {}
+
 Channel::~Channel() { loop_->DeleteChannel(this); }
 
-void Channel::HandleEvent() {
+void Channel::HandleEvent() const {
   if (ready_events_ & READ_EVENT) {
     read_callback_();
   }
@@ -45,30 +47,30 @@ void Channel::EnableWrite() {
   loop_->UpdateChannel(this);
 }
 
-void Channel::UseET() {
-  listen_events_ |= ET;
+void Channel::EnableET() {
+  listen_events_ |= EDGE_TRIGGERED;
   loop_->UpdateChannel(this);
 }
 
-Socket *Channel::GetSocket() { return socket_; }
+int Channel::Fd() const { return fd_; }
 
-int Channel::GetListenEvents() { return listen_events_; }
+int16_t Channel::ListenEvents() const { return listen_events_; }
 
-int Channel::GetReadyEvents() { return ready_events_; }
+int16_t Channel::ReadyEvents() const { return ready_events_; }
 
-bool Channel::GetExist() { return exist_; }
+bool Channel::Exist() const { return exist_; }
 
 void Channel::SetExist(bool _in) { exist_ = _in; }
 
-void Channel::SetReadyEvents(int _ev) {
+void Channel::SetReadyEvent(int16_t _ev) {
   if (_ev & READ_EVENT) {
     ready_events_ |= READ_EVENT;
   }
   if (_ev & WRITE_EVENT) {
     ready_events_ |= WRITE_EVENT;
   }
-  if (_ev & ET) {
-    ready_events_ |= ET;
+  if (_ev & EDGE_TRIGGERED) {
+    ready_events_ |= EDGE_TRIGGERED;
   }
 }
 

@@ -10,29 +10,23 @@
  */
 
 #include "EventLoop.h"
+#include <memory>
 #include <vector>
 #include "Channel.h"
 #include "Poller.h"
 #include "ThreadPool.h"
 
-EventLoop::EventLoop() : poller_(new Poller()) {  }
+EventLoop::EventLoop() { poller_ = std::make_unique<Poller>(); }
 
-EventLoop::~EventLoop() {
-  Quit();
-  delete poller_;
-}
+EventLoop::~EventLoop() = default;
 
-void EventLoop::Loop() {
-  while (!quit_) {
-    std::vector<Channel *> chs;
-    chs = poller_->Poll();
-    for (auto &ch : chs) {
-      ch->HandleEvent();
+void EventLoop::Loop() const {
+  while (true) {
+    for (Channel *active_ch : poller_->Poll()) {
+      active_ch->HandleEvent();
     }
   }
 }
 
-void EventLoop::Quit() { quit_ = true; };
-
-void EventLoop::UpdateChannel(Channel *_ch) { poller_->UpdateChannel(_ch); }
-void EventLoop::DeleteChannel(Channel *_ch) { poller_->DeleteChannel(_ch); }
+void EventLoop::UpdateChannel(Channel *_ch) const { poller_->UpdateChannel(_ch); }
+void EventLoop::DeleteChannel(Channel *_ch) const { poller_->DeleteChannel(_ch); }

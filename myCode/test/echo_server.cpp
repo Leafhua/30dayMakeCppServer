@@ -11,31 +11,30 @@
 
 #include <cstdlib>
 #include <iostream>
+
 #include "Connection.h"
-#include "EventLoop.h"
-#include "Server.h"
-#include "SignalHandler.h"
-#include "Socket.h"
+#include "common.h"
+#include "pine.h"
 
 int main() {
-  EventLoop *loop = new EventLoop();
-  Server *server = new Server(loop);
+  TcpServer *server = new TcpServer();
 
   Signal::signal(SIGINT, [&] {
     delete server;
-    delete loop;
     std::cout << "\nServer exit!" << std::endl;
     exit(0);
   });
 
-  server->NewConnect(
-      [](Connection *conn) { std::cout << "New Connection fd: " << conn->GetSocket()->GetFd() << std::endl; });
-  server->OnMessage([](Connection *conn) {
-    std::cout << "Message from client " << conn->ReadBuffer() << std::endl;
-    if (conn->GetState() == Connection::State::Connected) {
-      conn->Send(conn->ReadBuffer());
-    }
+  server->OnConnect(
+      [](Connection *conn) { std::cout << "New Connection fd: " << conn->GetSocket()->Fd() << std::endl; });
+
+  server->OnRecv([](Connection *conn) {
+    std::cout << "Message from client " << conn->ReadBuf()->CStr() << std::endl;
+    conn->Send(conn->ReadBuf()->CStr());
   });
-  loop->Loop();
+
+  server->Start();
+
+  delete server;
   return 0;
 }

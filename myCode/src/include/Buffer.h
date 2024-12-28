@@ -12,23 +12,22 @@
 #pragma once
 
 #include <sys/types.h>
+#include <cstddef>
 #include <string>
-#include "Macros.h"
+#include "common.h"
 class Buffer {
  public:
+  DISALLOW_COPY_AND_MOVE(Buffer);
   Buffer() = default;
   ~Buffer() = default;
 
-  DISALLOW_COPY_AND_MOVE(Buffer);
+  [[nodiscard]] const std::string &Buf() const;
+  [[nodiscard]] const char *CStr() const;
+  void SetBuf(const char *_buf);
 
-  ssize_t Size();
-
-  const char *ToStr();
-
+  [[nodiscard]] size_t Size() const;
   void Append(const char *_str, int _size);
   void Clear();
-  void Getline();
-  void SetBuf(const char *);
 
  private:
   std::string buf_;

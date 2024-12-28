@@ -12,81 +12,101 @@
 #include "Poller.h"
 #include <sys/epoll.h>
 #include <unistd.h>
+#include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <vector>
 #include "Channel.h"
 #include "Socket.h"
+#include "common.h"
 #include "util.h"
 
 #define MAX_EVENTS 1024
 
 #ifdef OS_LINUX
 
-Poller::Poller() : fd_(epoll_create1(0)) {
-  ErrorIf(fd_ == -1, "epoll create error");
-  events_ = new epoll_event[MAX_EVENTS];
+Poller::Poller() : fd_(epoll_create1(0)), events_(new epoll_event[MAX_EVENTS]) {
+  assert(fd_ != -1);
+  // ErrorIf(fd_ == -1, "epoll create error");
+
   memset(events_, 0, sizeof(*events_) * MAX_EVENTS);
 }
 
 Poller::~Poller() {
   if (fd_ != -1) {
     close(fd_);
+    fd_ = -1;
   }
   delete[] events_;
 }
-
-std::vector<Channel *> Poller::Poll(int timeout) {
+// TODO(hua) day15的错误可能在这
+std::vector<Channel *> Poller::Poll(int timeout) const {
   std::vector<Channel *> active_channels;
   int nfds = epoll_wait(fd_, events_, MAX_EVENTS, timeout);
-  ErrorIf(nfds == -1, "epoll wait error");
+  if (nfds == -1) {
+   perror("epoll wait error");
+  }
+
   for (int i = 0; i < nfds; ++i) {
-    Channel *ch = (Channel *)events_[i].data.ptr;
-    int events = events_[i].events;
+    Channel *channel_temp = (Channel *)events_[i].data.ptr;
+    uint32_t events = events_[i].events;
     if (events & EPOLLIN) {
-      ch->SetReadyEvents(Channel::READ_EVENT);
+      channel_temp->SetReadyEvent(Channel::READ_EVENT);
     }
     if (events & EPOLLOUT) {
-      ch->SetReadyEvents(Channel::WRITE_EVENT);
+      channel_temp->SetReadyEvent(Channel::WRITE_EVENT);
     }
     if (events & EPOLLET) {
-      ch->SetReadyEvents(Channel::ET);
+      channel_temp->SetReadyEvent(Channel::EDGE_TRIGGERED);
     }
-    active_channels.push_back(ch);
+    active_channels.push_back(channel_temp);
   }
 
   return active_channels;
 }
-
-void Poller::UpdateChannel(Channel *_ch) {
-  int sockfd = _ch->GetSocket()->GetFd();
-  struct epoll_event ev {};
-  ev.data.ptr = _ch;
-  if (_ch->GetListenEvents() & Channel::READ_EVENT) {
-    ev.events |= EPOLLIN | EPOLLPRI;
+// TODO(hua) day15的错误可能在这
+RC Poller::UpdateChannel(Channel *_ch) const {
+  int sockfd = _ch->Fd();
+  struct epoll_event ev_temp {};
+  ev_temp.data.ptr = _ch;
+  if (_ch->ListenEvents() & Channel::READ_EVENT) {
+    ev_temp.events |= EPOLLIN | EPOLLPRI;
   }
-  if (_ch->GetListenEvents() & Channel::WRITE_EVENT) {
-    ev.events |= EPOLLOUT;
+  if (_ch->ListenEvents() & Channel::WRITE_EVENT) {
+    ev_temp.events |= EPOLLOUT;
   }
-  if (_ch->GetListenEvents() & Channel::ET) {
-    ev.events |= EPOLLET;
+  if (_ch->ListenEvents() & Channel::EDGE_TRIGGERED) {
+    ev_temp.events |= EPOLLET;
   }
-  if (!_ch->GetExist()) {
-    ErrorIf(epoll_ctl(fd_, EPOLL_CTL_ADD, sockfd, &ev) == -1, "epoll add error");
-    _ch->GetExist();
+  if (!_ch->Exist()) {
+    if (epoll_ctl(fd_, EPOLL_CTL_ADD, sockfd, &ev_temp) == -1) {
+      perror("epoll add error");
+      return RC_POLLER_ERROR;
+    }
+    // assert((epoll_ctl(fd_, EPOLL_CTL_ADD, sockfd, &ev_temp) == -1) && "epoll add error");
   } else {
-    ErrorIf(epoll_ctl(fd_, EPOLL_CTL_MOD, sockfd, &ev) == -1, "epoll modify error");
-
+    if (epoll_ctl(fd_, EPOLL_CTL_MOD, sockfd, &ev_temp) == -1) {
+      perror("epoll modify error");
+      return RC_POLLER_ERROR;
+    }
+    // assert((epoll_ctl(fd_, EPOLL_CTL_MOD, sockfd, &ev_temp) == -1) && "epoll modify error");
   }
+  return RC_SUCCESS;
 }
 
-void Poller::DeleteChannel(Channel *_ch) {
-  int sockfd = _ch->GetSocket()->GetFd();
-  ErrorIf(epoll_ctl(fd_, EPOLL_CTL_DEL, sockfd, nullptr) == -1, "epoll delete error");
-  _ch->SetExist(false);
+RC Poller::DeleteChannel(Channel *_ch) const {
+  int sockfd = _ch->Fd();
+  if (epoll_ctl(fd_, EPOLL_CTL_DEL, sockfd, nullptr) == -1) {
+    perror("epoll delete error");
+    _ch->SetExist(false);
+    return RC_POLLER_ERROR;
+  }
+  // assert((epoll_ctl(fd_, EPOLL_CTL_DEL, sockfd, nullptr) == -1) && "epoll delete error");
+  // _ch->SetExist(false);
+  return RC_SUCCESS;
 }
 
 #endif
-
 
 #ifdef OS_MACOS
 

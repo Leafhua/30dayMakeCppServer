@@ -12,7 +12,7 @@
 #pragma once
 
 #include <vector>
-#include "Macros.h"
+#include "common.h"
 
 #ifdef OS_LINUX
 #include "sys/epoll.h"
@@ -24,19 +24,18 @@
 class Channel;
 class Poller {
  public:
+  DISALLOW_COPY_AND_MOVE(Poller);
+
   Poller();
   ~Poller();
 
-  DISALLOW_COPY_AND_MOVE(Poller);
+  RC UpdateChannel(Channel *_ch) const;
+  RC DeleteChannel(Channel *_ch) const;
 
-  void UpdateChannel(Channel *_ch);
-  void DeleteChannel(Channel *_ch);
-
-  std::vector<Channel *> Poll(int timeout = -1);
+  [[nodiscard]] std::vector<Channel *> Poll(int timeout = -1) const;
 
  private:
-  int fd_{1};
-
+  int fd_;
 
 #ifdef OS_LINUX
   struct epoll_event *events_{nullptr};
@@ -45,5 +44,4 @@ class Poller {
 #ifdef OS_MACOS
   struct kevent *events_{nullptr};
 #endif
-
 };

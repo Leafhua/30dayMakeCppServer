@@ -11,44 +11,31 @@
 
 #pragma once
 
-#include <netinet/in.h>
+#include <cstddef>
 #include <cstdint>
-#include "Macros.h"
-#include "Socket.h"
-class InetAddress {
- public:
-  InetAddress();
-  InetAddress(const char *_ip, uint16_t port);
-  ~InetAddress() = default;
-
-  DISALLOW_COPY_AND_MOVE(InetAddress);
-
-  void SetAddr(sockaddr_in _addr);
-  sockaddr_in GetAddr();
-  const char *GetIp();
-  uint16_t GetPort();
-
- private:
-  struct sockaddr_in addr_ = {};
-};
+#include <string>
+#include "common.h"
 class Socket {
  private:
-  int fd_{-1};
+  int fd_;
 
  public:
+  DISALLOW_COPY_AND_MOVE(Socket);
+
   Socket();
-  explicit Socket(int _fd);
   ~Socket();
 
-  DISALLOW_COPY_AND_MOVE(Socket);
-  void Bind(InetAddress *_addr);
-  void Listen();
-  void Connect(InetAddress *);
-  void Connect(const char *_ip, uint16_t port);
+  void SetFd(int _fd);
+  [[nodiscard]] int Fd() const;
+  [[nodiscard]] std::string GetAddr() const;
 
-  int Accept(InetAddress *);
+  RC Create();
+  RC Bind(const char *_ip, uint16_t _port) const;
+  [[nodiscard]] RC Listen() const;
+  RC Accept(int &_clnt_fd) const;
+  RC Connect(const char *_ip, uint16_t _port) const;
+  [[nodiscard]] RC SetNonBlocking() const;
 
-  void Setnonblocking();
-  bool IsNonBlocking();
-  int GetFd();
+  [[nodiscard]] bool IsNonBlocking() const;
+  [[nodiscard]] size_t RecvBufSize() const;
 };

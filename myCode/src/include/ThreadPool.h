@@ -23,7 +23,7 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include "Macros.h"
+#include "common.h"
 class ThreadPool {
  private:
   std::vector<std::thread> workers_;
@@ -33,10 +33,9 @@ class ThreadPool {
   std::atomic<bool> stop_{false};
 
  public:
-  explicit ThreadPool(unsigned int size = std::thread::hardware_concurrency());
-  // ThreadPool(int size = 10);
-  ~ThreadPool();
   DISALLOW_COPY_AND_MOVE(ThreadPool);
+  explicit ThreadPool(unsigned int size = std::thread::hardware_concurrency());
+  ~ThreadPool();
 
   // void add(std::function<void()>);
   template <class F, class... Args>

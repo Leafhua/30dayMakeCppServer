@@ -38,9 +38,9 @@ ThreadPool::~ThreadPool() {
     stop_ = true;
   }
   condition_variable_.notify_all();
-  for (std::thread &th : workers_) {
-    if (th.joinable()) {
-      th.join();
+  for (std::thread &worker_th : workers_) {
+    if (worker_th.joinable()) {
+      worker_th.join();
     }
   }
 }
